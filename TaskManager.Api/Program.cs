@@ -44,6 +44,9 @@ builder.Services.AddCors(options =>
 // Injeção de dependência dos services:
 builder.Services.AddScoped<ITarefaService, TarefaService>();
 
+// URL para deploy no Render
+builder.WebHost.UseUrls($"http://0.0.0:{Environment.GetEnvironmentVariable("PORT") ?? "8080"}");
+
 var app = builder.Build();
 
 // ---------- Pipeline de middlewares ----------
