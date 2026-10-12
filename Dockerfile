@@ -1,19 +1,21 @@
-# Estágio 1: Compilação (SDK)
-FROM ://microsoft.com AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-# Copia os arquivos de projeto e restaura as dependências
-COPY *.csproj ./
-RUN dotnet restore
+COPY ["TaskManager.Api.csproj", "./"]
+RUN dotnet restore "TaskManager.Api.csproj"
 
-# Copia o restante do código e compila a aplicação
-COPY . ./
-RUN dotnet publish -c Release -o /app/publish
+COPY . .
+RUN dotnet build "TaskManager.Api.csproj" -c Release -o /app/build
 
-# Estágio 2: Execução (Runtime leve)
-FROM ://microsoft.com AS runtime
+FROM build AS publish
+RUN dotnet publish "TaskManager.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
-COPY --from=build /app/publish .
 
-# Comando para iniciar a aplicação
+ENV ASPNETCORE_URLS=http://+:${PORT:-8080}
+EXPOSE 8080
+
+COPY --from=publish /app/publish .
+
 ENTRYPOINT ["dotnet", "TaskManager.Api.dll"]
