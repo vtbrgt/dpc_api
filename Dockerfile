@@ -1,10 +1,11 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY ["TaskManager.Api.csproj", "./"]
-RUN dotnet restore "TaskManager.Api.csproj"
+COPY ["TaskManager.Api/TaskManager.Api.csproj", "TaskManager.Api/"]
+RUN dotnet restore "TaskManager.Api/TaskManager.Api.csproj"
 
 COPY . .
+WORKDIR /src/TaskManager.Api
 RUN dotnet build "TaskManager.Api.csproj" -c Release -o /app/build
 
 FROM build AS publish
