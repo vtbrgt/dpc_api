@@ -30,33 +30,43 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
-// CORS para o React
-var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:5173" };
+// CORS para o React (local e deploy)
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
-        policy.WithOrigins(allowedOrigins)
-              .AllowAnyHeader()
-              .AllowAnyMethod());
+    {
+        policy.SetIsOriginAllowed(origin =>
+            {
+                if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri)) return false;
+                return uri.Host == "localhost" || uri.Host == "127.0.0.1" || allowedOrigins.Contains(origin);
+            })
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
 });
 
 // Injeção de dependência dos services:
 builder.Services.AddScoped<ITarefaService, TarefaService>();
 
-// URL para deploy no Render
-builder.WebHost.UseUrls($"http://0.0.0:{Environment.GetEnvironmentVariable("PORT") ?? "8080"}");
+// Render define a variável PORT. Localmente ela não existe e vale o launchSettings (5070)
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
 
 var app = builder.Build();
 
 // ---------- Pipeline de middlewares ----------
 
+app.UseCors("Frontend");
 app.UseExceptionHandler();
 
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseCors("Frontend");
 
 app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 app.MapControllers();
